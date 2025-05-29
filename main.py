@@ -1,35 +1,17 @@
-import os
-import json
-from moudle.api import QwenImageAnalyzer
+from pymongo import MongoClient
 
-def parse_result_to_dict(result_text):
-    result_dict = {}
-    lines = result_text.strip().split("\n")
-    for line in lines:
-        if line.startswith("[") and "：" in line and line.endswith("]"):
-            key_value = line[1:-1].split("：", 1)
-            if len(key_value) == 2:
-                key, value = key_value
-                result_dict[key.strip()] = value.strip()
-    return result_dict
+client = MongoClient("mongodb://localhost:27017/")
+db = client["ceramic_db"]
+collection = db["multimodal_samples"]
 
-def process_images_in_folder(folder_path, analyzer, prompt, save_path=None):
-    results = []
+# 检索条件（组合特征）
+query = {
+    "头发颜色": "",
+    "风格": {"$regex": ""}  # 模糊匹配关键词
+}
 
-    for filename in os.listdir(folder_path):
-        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-            img_path = os.path.join(folder_path, filename)
-            print(f"Processing {filename}...")
-            try:
-                result_text = analyzer.analyze_image(img_path, prompt=prompt)
-                result_dict = parse_result_to_dict(result_text)
-                result_dict["filename"] = filename
-                results.append(result_dict)
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
-
-    if save_path:
-        with open(save_path, "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
-
-    return results
+results = list(collection.find(query))
+print(results)
+# 打印结果
+for doc in results:
+    print(f"✅ 找到匹配图像：{doc['filename']}，风格：{doc['风格']}")
